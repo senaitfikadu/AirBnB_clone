@@ -31,6 +31,8 @@ def parse(arg):
         retl = [i.strip(",") for i in lexer]
         retl.append(curly_braces.group())
         return retl
+
+        
 class HBNBCommand(cmd.Cmd):
     prompt = '(hbnb) '
     __classes = {
@@ -117,34 +119,33 @@ class HBNBCommand(cmd.Cmd):
                     new_list.append(obj.__str__())
             print(new_list)
 
-    def do_update(self, args):
-        '''update an instance
-           Usage update <class name> <id> <attribute name> "<attribute value>"
-        '''
-        objects = models.storage.all()
-        args = args.split(" ")
-
-        if len(args) == 0:
-            print("** class name missing **")
-        elif args[0] not in HBNBCommand.__classes:
+    def do_update(self, line):
+        """Updates an instance based on the class name and id
+        by adding or updating attribute.
+        """
+        args = shlex.split(line)
+        args_size = len(args)
+        if args_size == 0:
+            print('** class name missing **')
+        elif args[0] not in self.allowed_classes:
             print("** class doesn't exist **")
-        elif len(args) == 1:
-            print("** instance id missing **")
-        elif len(args) == 2:
-            print("** attribute name missing **")
-        elif len(args) == 3:
-            print("** value missing **")
+        elif args_size == 1:
+            print('** instance id missing **')
         else:
-            key_find = args[0] + '.' + args[1]
-            obj = objects.get(key_find, None)
-
-            if not obj:
-                print("** no instance found **")
-                return
-
-            setattr(obj, args[2], args[3].lstrip('"').rstrip('"'))
-            models.storage.save()
-
+            key = args[0] + '.' + args[1]
+            inst_data = models.storage.all().get(key)
+            if inst_data is None:
+                print('** no instance found **')
+            elif args_size == 2:
+                print('** attribute name missing **')
+            elif args_size == 3:
+                print('** value missing **')
+            else:
+                args[3] = self.analyze_parameter_value(args[3])
+                setattr(inst_data, args[2], args[3])
+                setattr(inst_data, 'updated_at', datetime.now())
+                models.storage.save()
+                
     def check_class_name(self, name=""):
         """Check if stdin user typed class name and id."""
         if len(name) == 0:
@@ -202,7 +203,7 @@ class HBNBCommand(cmd.Cmd):
             "all": self.do_all,
             "show": self.do_show,
             "destroy": self.do_destroy,
-            # "count": self.do_count,
+            "count": self.do_count,
             "update": self.do_update
         }
         match = re.search(r"\.", arg)
